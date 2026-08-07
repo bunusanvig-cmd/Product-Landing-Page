@@ -1,0 +1,8 @@
+.next
+node_modules
+dist
+.env
+.env.local
+*.log
+coverage
+credentials/google-service-account.json

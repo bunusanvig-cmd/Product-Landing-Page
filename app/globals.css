@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-body: 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-sand-50 text-ink-900 antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(217, 164, 58, 0.22);
+}
+
+.glass-panel {
+  @apply border border-white/10 bg-white/90 backdrop-blur-xl;
+}
+
+.section-shell {
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+.eyebrow {
+  @apply inline-flex items-center rounded-full border border-gold-300/40 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.26em] text-ink-800 shadow-sm;
+}
+
+.headline {
+  @apply font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-7xl;
+}
+
+.subhead {
+  @apply text-base leading-7 text-sand-100/90 sm:text-lg;
+}
+
+.body-copy {
+  @apply text-sm leading-6 text-ink-700 sm:text-base;
+}
+
+.premium-card {
+  @apply rounded-[2rem] border border-white/10 bg-white/90 shadow-panel backdrop-blur-xl;
+}
+
+.primary-button {
+  @apply inline-flex items-center justify-center rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-ink-800;
+}
+
+.secondary-button {
+  @apply inline-flex items-center justify-center rounded-full border border-ink-900/15 bg-white px-6 py-3 text-sm font-semibold text-ink-900 transition hover:-translate-y-0.5 hover:border-ink-900/30 hover:bg-sand-50;
+}
+
+.section-title {
+  @apply font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-ink-900 sm:text-4xl;
+}
+
+.section-lead {
+  @apply mt-4 max-w-2xl text-base leading-7 text-ink-700 sm:text-lg;
+}
+
+.chip {
+  @apply inline-flex items-center gap-2 rounded-full bg-ink-900 px-4 py-2 text-xs font-semibold tracking-wide text-white;
+}
+
+.shadow-text {
+  text-shadow: 0 8px 30px rgba(0, 0, 0, 0.32);
+}

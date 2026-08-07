@@ -1,0 +1,20 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="56" x2="432" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1F2B18"/>
+      <stop offset="1" stop-color="#5B4B1D"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 170) rotate(90) scale(170 180)">
+      <stop stop-color="#F2C94C" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#F2C94C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bg)"/>
+  <circle cx="256" cy="170" r="150" fill="url(#glow)"/>
+  <path d="M256 112C220 146 196 188 196 236C196 290 221 327 256 360C291 327 316 290 316 236C316 188 292 146 256 112Z" fill="#F3C545"/>
+  <path d="M256 150C233 175 218 205 218 237C218 274 235 299 256 319C277 299 294 274 294 237C294 205 279 175 256 150Z" fill="#FFF2C4"/>
+  <path d="M185 360C220 335 333 335 368 360C347 383 317 398 256 398C195 398 165 383 185 360Z" fill="#F3C545"/>
+  <path d="M164 206C178 194 193 187 210 183" stroke="#F7E6A5" stroke-width="8" stroke-linecap="round"/>
+  <path d="M348 206C334 194 319 187 302 183" stroke="#F7E6A5" stroke-width="8" stroke-linecap="round"/>
+  <text x="256" y="456" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="58" font-weight="700">Dhara</text>
+</svg>
