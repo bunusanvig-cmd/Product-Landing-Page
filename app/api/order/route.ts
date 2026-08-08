@@ -1,43 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createOrderId } from '@/lib/id';
 import { fulfillOrder } from '@/lib/order-fulfillment';
+import { getCorsHeaders, isAllowedOrigin } from '@/lib/cors';
 import { getPricing, siteConfig } from '@/lib/site';
 import { orderRequestSchema } from '@/lib/validation';
 import type { StoredOrder } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
-function isAllowedOrigin(request: NextRequest) {
-  const expectedOrigin = process.env.FRONTEND_URL?.trim();
-  if (!expectedOrigin) return true;
-
-  const origin = request.headers.get('origin');
-  if (!origin) return true;
-
-  if (origin === expectedOrigin) return true;
-
-  try {
-    const actual = new URL(origin);
-    const expected = new URL(expectedOrigin);
-    const actualHost = actual.hostname.toLowerCase();
-    const expectedHost = expected.hostname.toLowerCase();
-    const loopbackHosts = new Set(['localhost', '127.0.0.1', '::1']);
-
-    return (
-      actual.protocol === expected.protocol &&
-      actual.port === expected.port &&
-      loopbackHosts.has(actualHost) &&
-      loopbackHosts.has(expectedHost)
-    );
-  } catch {
-    return false;
+export async function OPTIONS(request: NextRequest) {
+  if (!isAllowedOrigin(request)) {
+    return NextResponse.json({ ok: false, error: 'Origin not allowed' }, { status: 403 });
   }
+
+  return new NextResponse(null, {
+    status: 204,
+    headers: getCorsHeaders(request),
+  });
 }
 
 export async function POST(request: NextRequest) {
   try {
     if (!isAllowedOrigin(request)) {
-      return NextResponse.json({ ok: false, error: 'Origin not allowed' }, { status: 403 });
+      return NextResponse.json(
+        { ok: false, error: 'Origin not allowed' },
+        { status: 403, headers: getCorsHeaders(request) },
+      );
     }
 
     const payload = await request.json();
@@ -92,6 +80,8 @@ export async function POST(request: NextRequest) {
       quantity: order.quantity,
       totalPrice: order.totalPrice,
       queued: true,
+    }, {
+      headers: getCorsHeaders(request),
     });
   } catch (error) {
     return NextResponse.json(
@@ -99,7 +89,7 @@ export async function POST(request: NextRequest) {
         ok: false,
         error: error instanceof Error ? error.message : 'Unable to process order',
       },
-      { status: 500 },
+      { status: 500, headers: getCorsHeaders(request) },
     );
   }
 }
