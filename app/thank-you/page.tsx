@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRightIcon, CheckIcon } from '@/components/icons';
+import { PurchaseTracker } from '@/components/purchase-tracker';
 import { formatMoney, getPricing, siteConfig } from '@/lib/site';
 
 type ThankYouSearchParams = {
@@ -38,6 +39,12 @@ export default async function ThankYouPage({
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(217,164,58,0.16),_transparent_30%),linear-gradient(180deg,_#f8f3eb_0%,_#f8f3eb_100%)] py-12">
       <div className="section-shell">
         <div className="mx-auto max-w-3xl premium-card overflow-hidden p-8 text-center sm:p-10">
+          <PurchaseTracker
+            orderId={toFirstValue(resolvedSearchParams.orderId) || 'pending-order'}
+            productName={toFirstValue(resolvedSearchParams.productName) || siteConfig.productName}
+            quantity={quantity}
+            totalPrice={totalPrice}
+          />
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-ink-900 text-white">
             <CheckIcon className="h-7 w-7" />
           </div>

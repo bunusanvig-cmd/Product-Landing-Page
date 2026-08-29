@@ -1,9 +1,10 @@
 "use client";
 
 import type { FormEvent, ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRightIcon, CheckIcon } from './icons';
+import { isMetaPixelEnabled, trackMetaPixelEvent } from '@/lib/meta-pixel';
 import { buildThankYouHref, formatMoney, getPricing, siteConfig } from '@/lib/site';
 
 type CheckoutFormProps = {
@@ -32,6 +33,18 @@ export function CheckoutForm({
   const pricePerPiece = initialPricePerPiece;
   const productName = initialProductName;
   const totalPrice = pricing.total;
+
+  useEffect(() => {
+    if (!isMetaPixelEnabled()) return;
+
+    trackMetaPixelEvent('InitiateCheckout', {
+      content_name: productName,
+      content_type: 'product',
+      currency: 'NPR',
+      num_items: quantity,
+      value: totalPrice,
+    });
+  }, [productName, quantity, totalPrice]);
 
   const summary = useMemo(() => {
     return [
@@ -76,6 +89,16 @@ export function CheckoutForm({
 
       if (!response.ok || !data.ok) {
         throw new Error('error' in data ? data.error : 'Order submission failed');
+      }
+
+      if (isMetaPixelEnabled()) {
+        trackMetaPixelEvent('AddPaymentInfo', {
+          content_name: productName,
+          content_type: 'product',
+          currency: 'NPR',
+          num_items: quantity,
+          value: totalPrice,
+        });
       }
 
       router.push(

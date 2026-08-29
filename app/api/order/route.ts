@@ -69,9 +69,7 @@ export async function POST(request: NextRequest) {
       orderStatus: 'New Order',
     };
 
-    void fulfillOrder(order).catch((error) => {
-      console.error('Background order fulfillment failed', error);
-    });
+    await fulfillOrder(order);
 
     return NextResponse.json({
       ok: true,

@@ -2,8 +2,9 @@
 
 import Image from 'next/image';
 import type { ReactNode } from 'react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRightIcon, CheckIcon, HeartIcon, ShieldIcon, SparkIcon, TruckIcon } from './icons';
+import { isMetaPixelEnabled, trackMetaPixelEvent } from '@/lib/meta-pixel';
 import { buildCheckoutHref, formatMoney, getPricing, siteConfig } from '@/lib/site';
 
 function SectionHeading({
@@ -184,6 +185,30 @@ export function LandingPage() {
 
   const ctaHref = buildCheckoutHref({ quantity });
 
+  useEffect(() => {
+    if (!isMetaPixelEnabled()) return;
+
+    trackMetaPixelEvent('ViewContent', {
+      content_name: siteConfig.productName,
+      content_type: 'product',
+      currency: 'NPR',
+      num_items: quantity,
+      value: total,
+    });
+  }, [quantity, total]);
+
+  const handleAddToCart = () => {
+    if (!isMetaPixelEnabled()) return;
+
+    trackMetaPixelEvent('AddToCart', {
+      content_name: siteConfig.productName,
+      content_type: 'product',
+      currency: 'NPR',
+      num_items: quantity,
+      value: total,
+    });
+  };
+
   return (
     <main>
       <section className="bg-hero-radial pb-20 pt-8">
@@ -196,7 +221,7 @@ export function LandingPage() {
                 <div className="text-xs text-sand-100/70">Cash on Delivery funnel</div>
               </div>
             </div>
-            <a className="secondary-button hidden md:inline-flex" href={ctaHref}>
+            <a className="secondary-button hidden md:inline-flex" href={ctaHref} onClick={handleAddToCart}>
               Order Now
             </a>
           </header>
@@ -213,10 +238,10 @@ export function LandingPage() {
               <p className="mt-5 max-w-2xl text-sm leading-7 text-sand-100/80 md:text-base">{siteConfig.productDescription}</p>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <a className="primary-button" href={ctaHref}>
+                <a className="primary-button" href={ctaHref} onClick={handleAddToCart}>
                   Purchase Now <ArrowRightIcon className="ml-2 h-4 w-4" />
                 </a>
-                <a className="secondary-button" href={ctaHref}>
+                <a className="secondary-button" href={ctaHref} onClick={handleAddToCart}>
                   Order Now
                 </a>
               </div>
@@ -331,13 +356,13 @@ export function LandingPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  <a className="primary-button" href={ctaHref}>
+                  <a className="primary-button" href={ctaHref} onClick={handleAddToCart}>
                     Buy Now <ArrowRightIcon className="ml-2 h-4 w-4" />
                   </a>
-                  <a className="secondary-button" href={ctaHref}>
+                  <a className="secondary-button" href={ctaHref} onClick={handleAddToCart}>
                     Order Now
                   </a>
-                  <a className="secondary-button" href={ctaHref}>
+                  <a className="secondary-button" href={ctaHref} onClick={handleAddToCart}>
                     Purchase Now
                   </a>
                 </div>
@@ -404,7 +429,7 @@ export function LandingPage() {
             ))}
           </div>
           <div className="mt-8">
-            <a className="primary-button" href={ctaHref}>
+            <a className="primary-button" href={ctaHref} onClick={handleAddToCart}>
               Order Now <ArrowRightIcon className="ml-2 h-4 w-4" />
             </a>
           </div>
@@ -471,13 +496,13 @@ export function LandingPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-3 lg:justify-end">
-                <a className="primary-button" href={ctaHref}>
+                <a className="primary-button" href={ctaHref} onClick={handleAddToCart}>
                   Purchase Now <ArrowRightIcon className="ml-2 h-4 w-4" />
                 </a>
-                <a className="secondary-button" href={ctaHref}>
+                <a className="secondary-button" href={ctaHref} onClick={handleAddToCart}>
                   Order Now
                 </a>
-                <a className="secondary-button" href={ctaHref}>
+                <a className="secondary-button" href={ctaHref} onClick={handleAddToCart}>
                   Buy Now
                 </a>
               </div>

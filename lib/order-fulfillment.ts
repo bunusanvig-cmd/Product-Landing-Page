@@ -1,42 +1,56 @@
 import { appendOrderToSheet } from './google-sheets';
 import { sendBusinessNotification, sendCustomerReceipt } from './mailer';
-import { storePendingOrder } from './order-store';
 import type { StoredOrder } from './types';
 
+function logStageFailure(stage: string, error: unknown, order: StoredOrder) {
+  console.error(`[order-fulfillment] ${stage} failed`, {
+    orderId: order.orderId,
+    productName: order.productName,
+    quantity: order.quantity,
+    error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
+  });
+}
+
 export async function fulfillOrder(order: StoredOrder) {
-  let sheetWarning: string | null = null;
+  try {
+    console.info('[order-fulfillment] Writing order to Google Sheets', {
+      orderId: order.orderId,
+      sheet: process.env.GOOGLE_SHEET_TAB_NAME,
+    });
+    await appendOrderToSheet(order);
+    console.info('[order-fulfillment] Order written to Google Sheets', {
+      orderId: order.orderId,
+    });
+  } catch (error) {
+    logStageFailure('Google Sheets write', error, order);
+    throw error;
+  }
 
   try {
-    await appendOrderToSheet(order);
+    console.info('[order-fulfillment] Sending business order email', {
+      orderId: order.orderId,
+      to: process.env.BUSINESS_EMAIL,
+    });
+    await sendBusinessNotification(order);
+    console.info('[order-fulfillment] Business order email sent', {
+      orderId: order.orderId,
+    });
   } catch (error) {
-    sheetWarning =
-      error instanceof Error
-        ? error.message
-        : 'Google Sheets sync failed, so the order was stored locally for later recovery';
-
-    console.error('Google Sheets sync failed, storing order locally instead', error);
-    await storePendingOrder(order, sheetWarning);
+    logStageFailure('Business email', error, order);
+    throw error;
   }
 
-  const emailResults = await Promise.allSettled([
-    sendBusinessNotification(order),
-    sendCustomerReceipt(order),
-  ]);
-
-  const rejected = emailResults.find((result) => result.status === 'rejected') as
-    | PromiseRejectedResult
-    | undefined;
-
-  if (rejected) {
-    console.error('Order emails failed to send', rejected.reason);
+  try {
+    console.info('[order-fulfillment] Sending customer receipt email', {
+      orderId: order.orderId,
+      to: order.emailAddress,
+    });
+    await sendCustomerReceipt(order);
+    console.info('[order-fulfillment] Customer receipt email sent', {
+      orderId: order.orderId,
+    });
+  } catch (error) {
+    logStageFailure('Customer email', error, order);
+    throw error;
   }
-
-  return {
-    sheetWarning,
-    emailWarning: rejected
-      ? rejected.reason instanceof Error
-        ? rejected.reason.message
-        : 'One or more emails failed to send'
-      : null,
-  };
 }
