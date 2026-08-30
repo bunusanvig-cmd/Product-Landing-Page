@@ -20,12 +20,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {isMetaPixelEnabled() ? (
+          <Script
+            id="meta-pixel"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: getMetaPixelBootstrapScript(META_PIXEL_ID),
+            }}
+          />
+        ) : null}
+      </head>
       <body className="font-[family-name:var(--font-body)]" suppressHydrationWarning>
         {isMetaPixelEnabled() ? (
           <>
-            <Script id="meta-pixel-base" strategy="beforeInteractive">
-              {getMetaPixelBootstrapScript(META_PIXEL_ID)}
-            </Script>
             <noscript>
               <img
                 alt=""
