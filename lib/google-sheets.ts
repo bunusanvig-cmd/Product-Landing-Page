@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 import { google } from 'googleapis';
+import type { sheets_v4 } from 'googleapis';
 import type { StoredOrder } from './types';
 
 const ORDER_HEADERS = [
@@ -22,7 +23,39 @@ const ORDER_HEADERS = [
 const ORDER_COLUMN_COUNT = ORDER_HEADERS.length;
 const ORDER_STATUS_VALUES = ['New Order', 'Order Confirmed', 'Order Ongoing', 'Delivered', 'Cancelled'] as const;
 
-let sheetLayoutPromise: Promise<void> | null = null;
+type SheetLayout = {
+  sheetId: number;
+  title: string;
+};
+
+let sheetLayoutPromise: Promise<SheetLayout> | null = null;
+
+function getConfiguredSheetTabName() {
+  const tabName = process.env.GOOGLE_SHEET_TAB_NAME?.trim();
+  if (!tabName) {
+    throw new Error('Missing GOOGLE_SHEET_TAB_NAME');
+  }
+
+  return tabName;
+}
+
+function normalizeSheetTitle(title: string) {
+  return title.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function findMatchingSheet(
+  sheets: sheets_v4.Schema$Sheet[] | undefined,
+  desiredTitle: string,
+) {
+  const normalizedDesiredTitle = normalizeSheetTitle(desiredTitle);
+
+  return sheets?.find((sheet) => {
+    const sheetTitle = sheet.properties?.title?.trim();
+    if (!sheetTitle) return false;
+
+    return normalizeSheetTitle(sheetTitle) === normalizedDesiredTitle;
+  });
+}
 
 function assertGoogleConfig() {
   const missing: string[] = [];
@@ -139,7 +172,7 @@ async function ensureSheetLayout() {
 
       const sheets = google.sheets({ version: 'v4', auth });
       const spreadsheetId = process.env.GOOGLE_SHEET_ID as string;
-      const tabName = process.env.GOOGLE_SHEET_TAB_NAME as string;
+      const tabName = getConfiguredSheetTabName();
 
       let spreadsheet;
       try {
@@ -151,44 +184,56 @@ async function ensureSheetLayout() {
         throw new Error(help ? `${help} Original error: ${error instanceof Error ? error.message : String(error)}` : error instanceof Error ? error.message : 'Failed to read Google Sheet metadata');
       }
 
-      let targetSheet = spreadsheet.data.sheets?.find(
-        (sheet) => sheet.properties?.title === tabName,
-      );
+      let targetSheet = findMatchingSheet(spreadsheet.data.sheets, tabName);
 
       if (!targetSheet?.properties?.sheetId) {
-        const created = await sheets.spreadsheets.batchUpdate({
-          spreadsheetId,
-          requestBody: {
-            requests: [
-              {
-                addSheet: {
-                  properties: {
-                    title: tabName,
+        try {
+          const created = await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+              requests: [
+                {
+                  addSheet: {
+                    properties: {
+                      title: tabName,
+                    },
                   },
                 },
-              },
-            ],
-          },
-        });
+              ],
+            },
+          });
 
-        const createdSheet = created.data.replies?.[0]?.addSheet?.properties;
-        if (!createdSheet?.sheetId) {
-          throw new Error(`Google Sheet tab "${tabName}" could not be created`);
+          const createdSheet = created.data.replies?.[0]?.addSheet?.properties;
+          if (!createdSheet?.sheetId) {
+            throw new Error(`Google Sheet tab "${tabName}" could not be created`);
+          }
+
+          targetSheet = {
+            properties: {
+              sheetId: createdSheet.sheetId,
+              title: createdSheet.title ?? tabName,
+            },
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+          if (!message.includes('already exists') && !message.includes('duplicate')) {
+            throw error;
+          }
+
+          const refreshed = await sheets.spreadsheets.get({ spreadsheetId });
+          targetSheet = findMatchingSheet(refreshed.data.sheets, tabName);
+          if (!targetSheet?.properties?.sheetId) {
+            throw new Error(`Google Sheet tab "${tabName}" already exists but could not be resolved`);
+          }
         }
-
-        targetSheet = {
-          properties: {
-            sheetId: createdSheet.sheetId,
-            title: tabName,
-          },
-        };
       }
 
       const sheetId = targetSheet.properties?.sheetId;
       if (!sheetId) {
         throw new Error(`Google Sheet tab "${tabName}" is missing a sheet ID`);
       }
-      const headerRange = getSheetValuesRange(tabName);
+      const resolvedTitle = targetSheet.properties?.title?.trim() || tabName;
+      const headerRange = getSheetValuesRange(resolvedTitle);
       const headerValues = await sheets.spreadsheets.values.get({
         spreadsheetId,
         range: headerRange,
@@ -334,6 +379,11 @@ async function ensureSheetLayout() {
         spreadsheetId,
         requestBody: { requests },
       });
+
+      return {
+        sheetId,
+        title: resolvedTitle,
+      };
     })().catch((error) => {
       sheetLayoutPromise = null;
       throw error;
@@ -344,11 +394,10 @@ async function ensureSheetLayout() {
 }
 
 export async function appendOrderToSheet(order: StoredOrder) {
-  await ensureSheetLayout();
+  const layout = await ensureSheetLayout();
 
   const auth = getGoogleClient();
   const sheets = google.sheets({ version: 'v4', auth });
-  const tabName = process.env.GOOGLE_SHEET_TAB_NAME as string;
 
   const values = [
     [
@@ -371,7 +420,7 @@ export async function appendOrderToSheet(order: StoredOrder) {
   try {
     await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.GOOGLE_SHEET_ID,
-      range: `'${tabName.replace(/'/g, "''")}'!A:M`,
+      range: `'${layout.title.replace(/'/g, "''")}'!A:M`,
       valueInputOption: 'USER_ENTERED',
       insertDataOption: 'INSERT_ROWS',
       requestBody: { values },
