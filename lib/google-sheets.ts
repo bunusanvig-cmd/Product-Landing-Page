@@ -22,6 +22,7 @@ const ORDER_HEADERS = [
 
 const ORDER_COLUMN_COUNT = ORDER_HEADERS.length;
 const ORDER_STATUS_VALUES = ['New Order', 'Order Confirmed', 'Order Ongoing', 'Delivered', 'Cancelled'] as const;
+const ORDER_SHEET_TAB_NAME = 'Sheet 1';
 
 type SheetLayout = {
   sheetId: number;
@@ -29,15 +30,6 @@ type SheetLayout = {
 };
 
 let sheetLayoutPromise: Promise<SheetLayout> | null = null;
-
-function getConfiguredSheetTabName() {
-  const tabName = process.env.GOOGLE_SHEET_TAB_NAME?.trim();
-  if (!tabName) {
-    throw new Error('Missing GOOGLE_SHEET_TAB_NAME');
-  }
-
-  return tabName;
-}
 
 function normalizeSheetTitle(title: string) {
   return title
@@ -74,7 +66,6 @@ function assertGoogleConfig() {
   if (jsonPath) return;
 
   if (!process.env.GOOGLE_SHEET_ID) missing.push('GOOGLE_SHEET_ID');
-  if (!process.env.GOOGLE_SHEET_TAB_NAME) missing.push('GOOGLE_SHEET_TAB_NAME');
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) missing.push('GOOGLE_SERVICE_ACCOUNT_EMAIL');
   if (!process.env.GOOGLE_PRIVATE_KEY) missing.push('GOOGLE_PRIVATE_KEY');
 
@@ -182,7 +173,7 @@ async function ensureSheetLayout() {
 
       const sheets = google.sheets({ version: 'v4', auth });
       const spreadsheetId = process.env.GOOGLE_SHEET_ID as string;
-      const tabName = getConfiguredSheetTabName();
+      const tabName = ORDER_SHEET_TAB_NAME;
 
       let spreadsheet;
       try {
@@ -210,7 +201,7 @@ async function ensureSheetLayout() {
       if (!sheetId) {
         throw new Error(`Google Sheet tab "${tabName}" is missing a sheet ID`);
       }
-      const resolvedTitle = targetSheet.properties?.title?.trim() || tabName;
+      const resolvedTitle = targetSheet.properties?.title?.trim() || ORDER_SHEET_TAB_NAME;
       const headerRange = getSheetValuesRange(resolvedTitle);
       const headerValues = await sheets.spreadsheets.values.get({
         spreadsheetId,

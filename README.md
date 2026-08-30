@@ -39,7 +39,6 @@ Create a `.env.local` file from `.env.example` and fill in:
 - `EMAIL_FROM`
 - `BRAND_NAME`
 - `GOOGLE_SHEET_ID`
-- `GOOGLE_SHEET_TAB_NAME`
 - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
 - `GOOGLE_PRIVATE_KEY`
 - `SMTP_HOST`
@@ -52,7 +51,7 @@ Create a `.env.local` file from `.env.example` and fill in:
 ## Google Sheets setup
 
 1. Create a new Google Sheet.
-2. Add a tab with the name in `GOOGLE_SHEET_TAB_NAME`.
+2. Ensure the first tab in the workbook is the order sheet used by the backend.
 3. Add these header columns in row 1:
    - Order ID
    - Date & Time
