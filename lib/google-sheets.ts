@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 import { google } from 'googleapis';
-import type { sheets_v4 } from 'googleapis';
 import type { StoredOrder } from './types';
 
 const ORDER_HEADERS = [
@@ -22,7 +21,6 @@ const ORDER_HEADERS = [
 
 const ORDER_COLUMN_COUNT = ORDER_HEADERS.length;
 const ORDER_STATUS_VALUES = ['New Order', 'Order Confirmed', 'Order Ongoing', 'Delivered', 'Cancelled'] as const;
-const ORDER_SHEET_TAB_NAME = 'Sheet 1';
 
 type SheetLayout = {
   sheetId: number;
@@ -30,34 +28,6 @@ type SheetLayout = {
 };
 
 let sheetLayoutPromise: Promise<SheetLayout> | null = null;
-
-function normalizeSheetTitle(title: string) {
-  return title
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '');
-}
-
-function findMatchingSheet(
-  sheets: sheets_v4.Schema$Sheet[] | undefined,
-  desiredTitle: string,
-) {
-  const normalizedDesiredTitle = normalizeSheetTitle(desiredTitle);
-
-  return sheets?.find((sheet) => {
-    const sheetTitle = sheet.properties?.title?.trim();
-    if (!sheetTitle) return false;
-
-    return normalizeSheetTitle(sheetTitle) === normalizedDesiredTitle;
-  });
-}
-
-function getFirstUsableSheet(sheets: sheets_v4.Schema$Sheet[] | undefined) {
-  return sheets?.find((sheet) => {
-    const title = sheet.properties?.title?.trim();
-    return Boolean(title);
-  });
-}
 
 function assertGoogleConfig() {
   const missing: string[] = [];
@@ -173,7 +143,6 @@ async function ensureSheetLayout() {
 
       const sheets = google.sheets({ version: 'v4', auth });
       const spreadsheetId = process.env.GOOGLE_SHEET_ID as string;
-      const tabName = ORDER_SHEET_TAB_NAME;
 
       let spreadsheet;
       try {
@@ -185,23 +154,19 @@ async function ensureSheetLayout() {
         throw new Error(help ? `${help} Original error: ${error instanceof Error ? error.message : String(error)}` : error instanceof Error ? error.message : 'Failed to read Google Sheet metadata');
       }
 
-      let targetSheet = findMatchingSheet(spreadsheet.data.sheets, tabName);
-
-      if (!targetSheet?.properties?.sheetId) {
-        targetSheet = getFirstUsableSheet(spreadsheet.data.sheets);
-      }
-
-      if (!targetSheet?.properties?.sheetId) {
-        throw new Error(
-          `Google Sheet tab "${tabName}" could not be resolved and no usable existing sheet was found`,
-        );
+      const targetSheet = spreadsheet.data.sheets?.[0];
+      if (targetSheet?.properties?.sheetId == null) {
+        throw new Error('Google Sheet workbook does not contain a usable first worksheet');
       }
 
       const sheetId = targetSheet.properties?.sheetId;
-      if (!sheetId) {
-        throw new Error(`Google Sheet tab "${tabName}" is missing a sheet ID`);
+      if (sheetId == null) {
+        throw new Error('Google Sheet first worksheet is missing a sheet ID');
       }
-      const resolvedTitle = targetSheet.properties?.title?.trim() || ORDER_SHEET_TAB_NAME;
+      const resolvedTitle = targetSheet.properties?.title?.trim();
+      if (!resolvedTitle) {
+        throw new Error('Google Sheet first worksheet is missing a title');
+      }
       const headerRange = getSheetValuesRange(resolvedTitle);
       const headerValues = await sheets.spreadsheets.values.get({
         spreadsheetId,

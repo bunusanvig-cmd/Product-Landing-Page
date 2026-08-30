@@ -15,7 +15,7 @@ export async function fulfillOrder(order: StoredOrder) {
   try {
     console.info('[order-fulfillment] Writing order to Google Sheets', {
       orderId: order.orderId,
-      sheet: 'Sheet 1',
+      sheet: 'first worksheet',
     });
     await appendOrderToSheet(order);
     console.info('[order-fulfillment] Order written to Google Sheets', {
