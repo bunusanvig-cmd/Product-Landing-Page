@@ -40,7 +40,10 @@ function getConfiguredSheetTabName() {
 }
 
 function normalizeSheetTitle(title: string) {
-  return title.trim().replace(/\s+/g, ' ').toLowerCase();
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
 }
 
 function findMatchingSheet(
