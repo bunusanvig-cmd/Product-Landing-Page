@@ -60,6 +60,13 @@ function findMatchingSheet(
   });
 }
 
+function getFirstUsableSheet(sheets: sheets_v4.Schema$Sheet[] | undefined) {
+  return sheets?.find((sheet) => {
+    const title = sheet.properties?.title?.trim();
+    return Boolean(title);
+  });
+}
+
 function assertGoogleConfig() {
   const missing: string[] = [];
   const jsonPath = process.env.GOOGLE_SERVICE_ACCOUNT_JSON_PATH?.trim();
@@ -190,45 +197,13 @@ async function ensureSheetLayout() {
       let targetSheet = findMatchingSheet(spreadsheet.data.sheets, tabName);
 
       if (!targetSheet?.properties?.sheetId) {
-        try {
-          const created = await sheets.spreadsheets.batchUpdate({
-            spreadsheetId,
-            requestBody: {
-              requests: [
-                {
-                  addSheet: {
-                    properties: {
-                      title: tabName,
-                    },
-                  },
-                },
-              ],
-            },
-          });
+        targetSheet = getFirstUsableSheet(spreadsheet.data.sheets);
+      }
 
-          const createdSheet = created.data.replies?.[0]?.addSheet?.properties;
-          if (!createdSheet?.sheetId) {
-            throw new Error(`Google Sheet tab "${tabName}" could not be created`);
-          }
-
-          targetSheet = {
-            properties: {
-              sheetId: createdSheet.sheetId,
-              title: createdSheet.title ?? tabName,
-            },
-          };
-        } catch (error) {
-          const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
-          if (!message.includes('already exists') && !message.includes('duplicate')) {
-            throw error;
-          }
-
-          const refreshed = await sheets.spreadsheets.get({ spreadsheetId });
-          targetSheet = findMatchingSheet(refreshed.data.sheets, tabName);
-          if (!targetSheet?.properties?.sheetId) {
-            throw new Error(`Google Sheet tab "${tabName}" already exists but could not be resolved`);
-          }
-        }
+      if (!targetSheet?.properties?.sheetId) {
+        throw new Error(
+          `Google Sheet tab "${tabName}" could not be resolved and no usable existing sheet was found`,
+        );
       }
 
       const sheetId = targetSheet.properties?.sheetId;
